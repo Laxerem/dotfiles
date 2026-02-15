@@ -1,0 +1,115 @@
+*{
+  all: unset;
+  padding: 0;
+}
+
+.bar {
+  box-shadow: 0 2px 3px 1px rgba(6,6,11,0.9);
+  background-color: rgba(9, 9, 14, 0.94);
+  color: #cdd6f4;
+  font-family: "JetBrainsMono Nerd Font";
+  font-size: 14px;
+  padding: 4px 10px;
+}
+
+.bat-critical {
+  border-radius: 20px;
+  color: red;
+  background-color: rgba(177, 21, 21, 0.288);
+}
+
+.bat-low {
+  color: rgb(212, 104, 16);
+}
+
+.bat-medium {
+  color: rgba(255, 217, 0, 0.85);
+}
+
+.bat-high {
+  color: rgba(171, 240, 9,0.85);
+}
+
+.left { 
+  margin-left: 10px;
+}
+
+.ram {
+  padding-left: 15px;
+}
+
+
+.bat-charging-low {
+  border-radius: 20px;
+  background: linear-gradient(270deg,rgba(9, 9, 14, 0.94), rgba(9, 9, 14, 0.94),rgba(9, 9, 14, 0.94), rgba(184, 8, 8, 0.479));
+  background-size: 150% 300%;
+  animation: chargeGradient 3s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bat-charging-medium {
+  border-radius: 20px;
+  background: linear-gradient(270deg,rgba(9, 9, 14, 0.94), rgba(9, 9, 14, 0.94), rgba(255, 217, 0, 0.13));
+  background-size: 140% 300%;
+  animation: chargeGradient 15s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bat-charging-high {
+  border-radius: 20px;
+  background: linear-gradient(270deg,rgba(9, 9, 14, 0.94),  rgba(72, 255, 0, 0.123));
+  background-size: 400% 300%;
+  animation: chargeGradient 15s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes chargeGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+//Температура CPU
+.temp_cold { color: #1DB0E0 } 
+.temp_normal { color: white; } 
+.temp_warm { color: rgb(130, 218, 15); } 
+.temp_hot {  color: rgb(255, 115, 0); } 
+.temp_very_hot { color: rgb(255, 72, 0); } 
+.temp_critical { color: red; border-bottom: solid 2px red; }
+
+.temp_cold, .temp_normal, .temp_warm, .temp_hot, .temp_very_hot, .temp_critical {
+  transition: 1s;
+}
+
+// Отступы для правой части панели
+.wifi-name-box {
+  margin-left: 10px;  // Отступ слева от названия сети
+}
+
+.wifi-icon-box {
+  margin-left: 10px;  // Отступ между названием и иконкой
+}
+
+.volume-box {
+  margin-left: 20px;  // Отступ слева от блока громкости
+}
+
+.volume-icon {
+  color: #cdd6f4;  // Обычный цвет иконки
+}
+
+.volume-icon-muted {
+  color: red;  // Красная иконка при mute
+}
+
+.volume-text {
+  color: #cdd6f4;
+}
+
+.time-box {
+  margin-left: 30px; // Отступ между громкостью и временем
+  margin-right: 20px;
+}

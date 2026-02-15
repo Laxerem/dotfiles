@@ -1,0 +1,68 @@
+(defwindow mybar
+  :monitor 0
+  :geometry (geometry :x "0%" :y "0%" :width "100%" :height "35px" :anchor "top center")
+  :exclusive true
+  (box :class "bar" :orientation "horizontal"
+    (box :class "left" :orientation "horizontal" :halign "start"
+      (label :text "Battery ${BATTERY}%"
+ :class "${CHARGE_STATUS == 'Charging' ?
+          (BATTERY <= 30 ? 'bat-charging-low' :
+          (BATTERY <= 80 ? 'bat-charging-medium' : 'bat-charging-high')) :
+          (BATTERY <= 15 ? 'bat-critical' :
+          (BATTERY <= 30 ? 'bat-low' :
+          (BATTERY <= 80 ? 'bat-medium' : 'bat-high')))}")
+
+      (label :class "ram" :text "RAM: ${MEM}")
+      (label :class "cpu-usage" :text "CPU: ${CPU_USAGE}%")
+      ;(label :class "volume" :text "Vol: ${VOLUME}%")
+      
+      ;;(image :path "${CHARGE_STATUS != 'Discharging' ? '/home/laxerem/.config/my_eww/icons/charging.svg' : '/home/laxerem/.config/my_eww/icons/charging.svg'}")
+    )
+    (box :class "center" :halign "center"
+      (label 
+        :text "${CPU_TEMP_TEXT}"
+        :class "${CPU_TEMP_CLASS}"
+      )
+    )
+    (box :class "right" :orientation "horizontal" :halign "end" :space-evenly false
+      (box :class "wifi-name-box" :hexpand false
+        (label :text "${WIFI}" :limit-width 15 :truncate true)
+      )
+      (box :class "wifi-icon-box" :hexpand false :width 16 :height 16
+        (image :path "${WIFI == 'Без интернета' ? '/home/laxerem/.config/my_eww/icons/nowifi.svg' : (VPN_STATUS == 'VPN' ? '/home/laxerem/.config/my_eww/icons/vpn.svg' : '/home/laxerem/.config/my_eww/icons/wifi.svg')}"
+          :fit true
+        )
+      )
+      (box :class "volume-box" :hexpand false :orientation "horizontal" :spacing 5
+        (label :class "${VOLUME_MUTED == 'true' ? 'volume-icon-muted' : 'volume-icon'}"
+               :text "${VOLUME_MUTED == 'true' ? '󰖁' : '󰕾'}")
+        (label :class "volume-text" :text "${VOLUME}%")
+      )
+      (box :class "time-box" :hexpand false
+        (label :text "${get_time}")
+      )
+    )
+  )
+)
+
+(defwidget time [time]
+    (eventbox :cursor "pointer"
+              :onclick ""
+              :width 120
+              :height 25
+              :class "time-label"
+              (label :text "${time}")
+    )
+)
+
+(defpoll BATTERY :interval "5s" "cat /sys/class/power_supply/BAT1/capacity | tr -d '\\n'")
+(defpoll CHARGE_STATUS :interval "0.1s" "cat /sys/class/power_supply/BAT1/status | tr -d '\\n'")
+(defpoll WIFI :interval "2s" "~/.config/my_eww/scripts/check_wifi.sh | tr -d '\\n'")
+(defpoll VPN_STATUS :interval "2s" "~/.config/my_eww/scripts/check_vpn.sh")
+(defpoll get_time :interval "1s" "date +%H:%M:%S")
+(defpoll MEM :interval "2s" "free -h --si | awk '/Mem:/ {print $3 \\/\" $2}'")
+(defpoll CPU_TEMP_TEXT :interval "2s" "~/.config/my_eww/scripts/cpu_temp.sh | awk '{print $1 \" \" $2}'")
+(defpoll CPU_TEMP_CLASS :interval "2s" "~/.config/my_eww/scripts/cpu_temp.sh | awk '{print $3}'")
+(defpoll CPU_USAGE :interval "2s" "top -bn1 | grep 'Cpu(s)' | awk '{print int($2 + $4)}'")
+(defpoll VOLUME :interval "0.5s" "pamixer --get-volume | tr -d '\\n'")
+(defpoll VOLUME_MUTED :interval "0.5s" "pamixer --get-mute")
