@@ -115,7 +115,6 @@
                   (box :orientation "h"
                        :space-evenly false
                        (label :text "${wifistatus.icon}")
-                       (label :class "space-wifi" :text "\\u00A0")
                        (revealer :reveal {wifirev||wifictlrev?true:false}
                                  :transition "slideright"
                                  :duration "350ms"
