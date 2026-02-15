@@ -3,20 +3,22 @@
   :geometry (geometry :x "0%" :y "0%" :width "100%" :height "35px" :anchor "top center")
   :exclusive true
   (box :class "bar" :orientation "horizontal"
-    (box :class "left" :orientation "horizontal" :halign "start"
-      (label :text "Battery ${BATTERY}%"
+    (box :class "left" :orientation "horizontal" :halign "start" :space-evenly false
+      (box :class "battery-box" :hexpand false
+        (label :text "Battery ${BATTERY}%"
  :class "${CHARGE_STATUS == 'Charging' ?
           (BATTERY <= 30 ? 'bat-charging-low' :
           (BATTERY <= 80 ? 'bat-charging-medium' : 'bat-charging-high')) :
           (BATTERY <= 15 ? 'bat-critical' :
           (BATTERY <= 30 ? 'bat-low' :
           (BATTERY <= 80 ? 'bat-medium' : 'bat-high')))}")
-
-      (label :class "ram" :text "RAM: ${MEM}")
-      (label :class "cpu-usage" :text "CPU: ${CPU_USAGE}%")
-      ;(label :class "volume" :text "Vol: ${VOLUME}%")
-      
-      ;;(image :path "${CHARGE_STATUS != 'Discharging' ? '/home/laxerem/.config/my_eww/icons/charging.svg' : '/home/laxerem/.config/my_eww/icons/charging.svg'}")
+      )
+      (box :class "ram-box" :hexpand false
+        (label :class "ram" :text "RAM: ${MEM}")
+      )
+      (box :class "cpu-box" :hexpand false
+        (label :class "cpu-usage" :text "CPU: ${CPU_USAGE}%")
+      )
     )
     (box :class "center" :halign "center"
       (label 
@@ -33,13 +35,37 @@
           :fit true
         )
       )
-      (box :class "volume-box" :hexpand false :orientation "horizontal" :spacing 5
-        (label :class "${VOLUME_MUTED == 'true' ? 'volume-icon-muted' : 'volume-icon'}"
-               :text "${VOLUME_MUTED == 'true' ? '󰖁' : '󰕾'}")
-        (label :class "volume-text" :text "${VOLUME}%")
+      (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ open volume-popup"
+        (box :class "volume-box" :hexpand false :orientation "horizontal" :spacing 5
+          (label :class "${VOLUME_MUTED == 'true' ? 'volume-icon-muted' : 'volume-icon'}"
+                 :text "${VOLUME_MUTED == 'true' ? '󰖁' : '󰕾'}")
+          (label :class "volume-text" :text "${VOLUME}%")
+        )
       )
       (box :class "time-box" :hexpand false
         (label :text "${get_time}")
+      )
+    )
+  )
+)
+
+(defwindow volume-popup
+  :monitor 0
+  :geometry (geometry :x "18px" :y "0px" :width "250px" :height "60px" :anchor "top right")
+  :stacking "overlay"
+  :windowtype "normal"
+  :wm-ignore true
+  (eventbox :onhoverlost "eww -c /home/laxerem/.config/my_eww/ close volume-popup"
+    (box :class "volume-popup" :orientation "vertical" :spacing 10
+      (box :orientation "vertical" :spacing 5
+        (box :orientation "horizontal" :spacing 10
+          (label :text "${VOLUME}%")
+        )
+        (scale :class "volume-slider"
+               :value VOLUME
+               :min 0
+               :max 101
+               :onchange "pamixer --set-volume {}")
       )
     )
   )
@@ -60,7 +86,7 @@
 (defpoll WIFI :interval "2s" "~/.config/my_eww/scripts/check_wifi.sh | tr -d '\\n'")
 (defpoll VPN_STATUS :interval "2s" "~/.config/my_eww/scripts/check_vpn.sh")
 (defpoll get_time :interval "1s" "date +%H:%M:%S")
-(defpoll MEM :interval "2s" "free -h --si | awk '/Mem:/ {print $3 \\/\" $2}'")
+(defpoll MEM :interval "2s" "free -h --si | awk '/Mem:/ {print $3 \"/\" $2}'")
 (defpoll CPU_TEMP_TEXT :interval "2s" "~/.config/my_eww/scripts/cpu_temp.sh | awk '{print $1 \" \" $2}'")
 (defpoll CPU_TEMP_CLASS :interval "2s" "~/.config/my_eww/scripts/cpu_temp.sh | awk '{print $3}'")
 (defpoll CPU_USAGE :interval "2s" "top -bn1 | grep 'Cpu(s)' | awk '{print int($2 + $4)}'")

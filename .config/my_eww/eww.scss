@@ -30,12 +30,17 @@
   color: rgba(171, 240, 9,0.85);
 }
 
-.left { 
-  margin-left: 10px;
+// Отступы для левой части панели
+.battery-box {
+  margin-left: 20px;  // Отступ слева от батареи
 }
 
-.ram {
-  padding-left: 15px;
+.ram-box {
+  margin-left: 20px;  // Отступ между батареей и RAM
+}
+
+.cpu-box {
+  margin-left: 20px;  // Отступ между RAM и CPU
 }
 
 
@@ -112,4 +117,57 @@
 .time-box {
   margin-left: 30px; // Отступ между громкостью и временем
   margin-right: 20px;
+}
+
+// Всплывающее окно громкости
+.volume-popup {
+  background-color: rgba(9, 9, 14, 0.95);
+  border: 1px solid rgba(205, 214, 244, 0.2);
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.volume-popup-icon {
+  font-size: 24px;
+  color: #cdd6f4;
+}
+
+.volume-popup-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #cdd6f4;
+}
+
+.volume-slider {
+  min-width: 200px;
+}
+
+.volume-slider trough {
+  min-height: 8px;
+  border-radius: 4px;
+  background-color: rgba(205, 214, 244, 0.2);
+}
+
+.volume-slider highlight {
+  background-color: #89b4fa;
+  border-radius: 4px;
+}
+
+.volume-slider slider {
+  min-width: 16px;
+  min-height: 16px;
+  border-radius: 50%;
+  background-color: #cdd6f4;
+}
+
+.volume-mute-btn {
+  padding: 8px;
+  border-radius: 5px;
+  background-color: rgba(137, 180, 250, 0.2);
+  color: #cdd6f4;
+}
+
+.volume-mute-btn:hover {
+  background-color: rgba(137, 180, 250, 0.4);
 }
