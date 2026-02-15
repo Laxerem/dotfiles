@@ -38,7 +38,9 @@
       (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ open volume-popup"
         (box :class "volume-box" :hexpand false :orientation "horizontal" :spacing 5
           (label :class "${VOLUME_MUTED == 'true' ? 'volume-icon-muted' : 'volume-icon'}"
-                 :text "${VOLUME_MUTED == 'true' ? '󰖁' : '󰕾'}")
+                 :text "${VOLUME_MUTED == 'true' ?
+                          (HEADPHONES == 'true' ? '󰟎' : '󰖁') :
+                          (HEADPHONES == 'true' ? '󰋋' : '󰕾')}")
           (label :class "volume-text" :text "${VOLUME}%")
         )
       )
@@ -92,3 +94,4 @@
 (defpoll CPU_USAGE :interval "2s" "top -bn1 | grep 'Cpu(s)' | awk '{print int($2 + $4)}'")
 (defpoll VOLUME :interval "0.5s" "pamixer --get-volume | tr -d '\\n'")
 (defpoll VOLUME_MUTED :interval "0.5s" "pamixer --get-mute")
+(defpoll HEADPHONES :interval "2s" "pactl get-default-sink | grep -q 'bluez_output\\|headphone\\|headset' && echo 'true' || echo 'false'")
