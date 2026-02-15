@@ -6,7 +6,7 @@
     (box :class "left" :orientation "horizontal" :halign "start" :space-evenly false
       (box :class "battery-box" :hexpand false
         (label :text "Battery ${BATTERY}%"
- :class "${CHARGE_STATUS == 'Charging' ?
+ :class "${CHARGE_STATUS == 'Charging' || CHARGE_STATUS == 'Not charging' ?
           (BATTERY <= 30 ? 'bat-charging-low' :
           (BATTERY <= 80 ? 'bat-charging-medium' : 'bat-charging-high')) :
           (BATTERY <= 15 ? 'bat-critical' :
@@ -67,7 +67,7 @@
                :value VOLUME
                :min 0
                :max 101
-               :onchange "pamixer --set-volume {}")
+               :onchange "~/.config/my_eww/scripts/set_volume.sh {}")
       )
     )
   )

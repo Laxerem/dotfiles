@@ -13,20 +13,24 @@
 }
 
 .bat-critical {
+  padding: 0 10px;
   border-radius: 20px;
   color: red;
   background-color: rgba(177, 21, 21, 0.288);
 }
 
 .bat-low {
+  padding: 0 10px;
   color: rgb(212, 104, 16);
 }
 
 .bat-medium {
+  padding: 0 10px;
   color: rgba(255, 217, 0, 0.85);
 }
 
 .bat-high {
+  padding: 0 10px;
   color: rgba(171, 240, 9,0.85);
 }
 
@@ -45,6 +49,7 @@
 
 
 .bat-charging-low {
+  padding: 0 10px;
   border-radius: 20px;
   background: linear-gradient(270deg,rgba(9, 9, 14, 0.94), rgba(9, 9, 14, 0.94),rgba(9, 9, 14, 0.94), rgba(184, 8, 8, 0.479));
   background-size: 150% 300%;
@@ -54,6 +59,7 @@
 }
 
 .bat-charging-medium {
+  padding: 0 10px;
   border-radius: 20px;
   background: linear-gradient(270deg,rgba(9, 9, 14, 0.94), rgba(9, 9, 14, 0.94), rgba(255, 217, 0, 0.13));
   background-size: 140% 300%;
@@ -63,9 +69,10 @@
 }
 
 .bat-charging-high {
+  padding: 0 10px;
   border-radius: 20px;
-  background: linear-gradient(270deg,rgba(9, 9, 14, 0.94),  rgba(72, 255, 0, 0.123));
-  background-size: 400% 300%;
+  background: linear-gradient(270deg, rgba(9, 9, 14, 0.94), rgba(9, 9, 14, 0.94), rgba(57, 179, 9, 0.6));
+  background-size: 150% 300%;
   animation: chargeGradient 15s ease infinite;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
