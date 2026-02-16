@@ -36,6 +36,7 @@
         )
       )
       (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ open volume-popup"
+                :onclick "pamixer --toggle-mute"
         (box :class "volume-box" :hexpand false :orientation "horizontal" :spacing 5
           (label :class "${VOLUME_MUTED == 'true' ? 'volume-icon-muted' : 'volume-icon'}"
                  :text "${VOLUME_MUTED == 'true' ?
@@ -53,21 +54,33 @@
 
 (defwindow volume-popup
   :monitor 0
-  :geometry (geometry :x "18px" :y "0px" :width "250px" :height "60px" :anchor "top right")
+  :geometry (geometry :x "25px" :y "0px" :width "100px" :height "100px" :anchor "top right")
   :stacking "overlay"
   :windowtype "normal"
   :wm-ignore true
   (eventbox :onhoverlost "eww -c /home/laxerem/.config/my_eww/ close volume-popup"
-    (box :class "volume-popup" :orientation "vertical" :spacing 10
-      (box :orientation "vertical" :spacing 5
-        (box :orientation "horizontal" :spacing 10
-          (label :text "${VOLUME}%")
+    (box :class "volume-popup" :orientation "vertical" :spacing 0 :space-evenly false
+      (box :orientation "vertical" :space-evenly false :vexpand false
+        (box :hexpand false
+          (label :class "volume-percent" :text "${VOLUME}%")
         )
-        (scale :class "volume-slider"
-               :value VOLUME
-               :min 0
-               :max 101
-               :onchange "~/.config/my_eww/scripts/set_volume.sh {}")
+        (box :hexpand false
+          (scale :class "volume-slider"
+                 :value VOLUME
+                 :min 0
+                 :max 101
+                 :onchange "~/.config/my_eww/scripts/set_volume.sh {}")
+        )
+      )
+      (box :class "audio-devices-section" :orientation "vertical" :spacing 0 :vexpand false :space-evenly false
+        (box :vexpand false
+          (label :class "audio-devices-title" :text "Devices" :xalign 0)
+        )
+        (box :vexpand false
+          (scroll :vscroll true :hscroll false :height 70
+            (literal :content audio_sinks)
+          )
+        )
       )
     )
   )
@@ -95,3 +108,4 @@
 (defpoll VOLUME :interval "0.5s" "pamixer --get-volume | tr -d '\\n'")
 (defpoll VOLUME_MUTED :interval "0.5s" "pamixer --get-mute")
 (defpoll HEADPHONES :interval "2s" "pactl get-default-sink | grep -q 'bluez_output\\|headphone\\|headset' && echo 'true' || echo 'false'")
+(deflisten audio_sinks :initial "" "bash -c 'while true; do ~/.config/my_eww/scripts/gen_audio_sinks.sh; sleep 3; done'")
