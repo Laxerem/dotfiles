@@ -35,7 +35,8 @@
           :fit true
         )
       )
-      (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ open volume-popup"
+      (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ update volume_hover=true; ~/.config/my_eww/scripts/open_popup.sh volume-popup"
+                :onhoverlost "eww -c /home/laxerem/.config/my_eww/ update volume_hover=false; ~/.config/my_eww/scripts/close_popup_delayed.sh volume-popup volume_hover &"
                 :onclick "pamixer --toggle-mute"
         (box :class "volume-box" :hexpand false :orientation "horizontal" :spacing 5
           (label :class "${VOLUME_MUTED == 'true' ? 'volume-icon-muted' : 'volume-icon'}"
@@ -58,7 +59,8 @@
   :stacking "overlay"
   :windowtype "normal"
   :wm-ignore true
-  (eventbox :onhoverlost "eww -c /home/laxerem/.config/my_eww/ close volume-popup"
+  (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ update volume_hover=true"
+            :onhoverlost "eww -c /home/laxerem/.config/my_eww/ update volume_hover=false; eww -c /home/laxerem/.config/my_eww/ close volume-popup"
     (box :class "volume-popup" :orientation "vertical" :spacing 0 :space-evenly false
       (box :orientation "vertical" :space-evenly false :vexpand false
         (box :hexpand false
@@ -95,6 +97,8 @@
               (label :text "${time}")
     )
 )
+
+(defvar volume_hover false)
 
 (defpoll BATTERY :interval "5s" "cat /sys/class/power_supply/BAT1/capacity | tr -d '\\n'")
 (defpoll CHARGE_STATUS :interval "0.1s" "cat /sys/class/power_supply/BAT1/status | tr -d '\\n'")
