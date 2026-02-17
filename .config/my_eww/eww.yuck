@@ -99,6 +99,7 @@
   :stacking "overlay"
   :windowtype "normal"
   :wm-ignore true
+  :focusable true
   (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=true"
             :onhoverlost "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=false; ~/.config/my_eww/scripts/close_wifi_popup_delayed.sh &"
     (box :class "wifi-popup" :orientation "vertical" :spacing 5 :space-evenly false
