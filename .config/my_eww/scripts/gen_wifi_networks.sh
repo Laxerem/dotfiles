@@ -76,8 +76,8 @@ nmcli -t -f IN-USE,SSID,SIGNAL,SECURITY device wifi list | \
             # Для сохраненных сетей - прямое подключение
             connect_cmd="~/.config/my_eww/scripts/connect_wifi.sh '$ssid_escaped' 'saved'"
         else
-            # Для несохраненных - показать поле ввода пароля
-            connect_cmd="eww -c /home/laxerem/.config/my_eww/ update wifi_connect_ssid='$ssid_escaped' wifi_show_password=true"
+            # Для несохраненных - открыть отдельное окно ввода пароля
+            connect_cmd="eww -c /home/laxerem/.config/my_eww/ close wifi-popup; eww -c /home/laxerem/.config/my_eww/ update wifi_connect_ssid='$ssid_escaped' wifi_password=''; eww -c /home/laxerem/.config/my_eww/ open wifi-password-popup"
         fi
 
         # Генерируем виджет кнопки для сети

@@ -27,10 +27,8 @@ if [ -n "$PASSWORD" ]; then
     notify-send "Wi-Fi" "Подключение к $SSID..."
     if nmcli device wifi connect "$SSID" password "$PASSWORD" 2>/dev/null; then
         notify-send "Wi-Fi" "Успешно подключено к $SSID"
-        # Сбрасываем переменные в EWW
-        eww -c /home/laxerem/.config/my_eww/ update wifi_show_password=false
-        eww -c /home/laxerem/.config/my_eww/ update wifi_connect_ssid=''
-        eww -c /home/laxerem/.config/my_eww/ update wifi_password=''
+        eww -c /home/laxerem/.config/my_eww/ close wifi-password-popup
+        eww -c /home/laxerem/.config/my_eww/ update wifi_connect_ssid='' wifi_password=''
     else
         notify-send "Wi-Fi Error" "Не удалось подключиться к $SSID. Проверьте пароль."
     fi
