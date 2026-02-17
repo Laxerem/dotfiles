@@ -7,7 +7,6 @@ EWW="eww -c /home/laxerem/.config/my_eww"
 BAR_HEIGHT=35
 FROM_POPUP="${1:-}"
 
-sleep 0.3
 
 # Не закрываем, если пользователь вводит пароль
 if [ "$($EWW get wifi_show_password)" = "true" ]; then
