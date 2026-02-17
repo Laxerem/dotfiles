@@ -10,6 +10,10 @@ ALL_POPUPS="volume-popup wifi-popup"
 for p in $ALL_POPUPS; do
     if [ "$p" != "$WINDOW" ]; then
         $EWW close "$p" 2>/dev/null
+        # Сбрасываем wifi-переменные при закрытии wifi-popup
+        if [ "$p" = "wifi-popup" ]; then
+            $EWW update wifi_show_password=false wifi_connect_ssid='' wifi_password='' 2>/dev/null
+        fi
     fi
 done
 

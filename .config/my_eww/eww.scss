@@ -157,7 +157,7 @@
 }
 
 .volume-slider {
-  min-width: 200px;
+  min-width: 150px;
   margin-bottom: 10px;
 }
 
@@ -245,4 +245,141 @@
   font-size: 11px;
   padding: 0;
   margin: 0;
+}
+
+// Всплывающее окно Wi-Fi
+.wifi-popup {
+  background-color: rgba(9, 9, 14, 0.95);
+  border: 1px solid rgba(205, 214, 244, 0.2);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.wifi-popup-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #89b4fa;
+  margin-bottom: 3px;
+}
+
+.wifi-network {
+  padding: 5px 6px;
+  border-radius: 5px;
+  background-color: rgba(205, 214, 244, 0.05);
+  color: #cdd6f4;
+  transition: background-color 0.2s;
+}
+
+.wifi-network:hover {
+  background-color: rgba(205, 214, 244, 0.15);
+}
+
+.wifi-network-active {
+  padding: 5px 6px;
+  border-radius: 5px;
+  background-color: rgba(137, 180, 250, 0.3);
+  color: #89b4fa;
+}
+
+.wifi-network box,
+.wifi-network-active box {
+  min-height: 0;
+  padding: 0;
+  margin: 0 2px;
+}
+
+.wifi-network label,
+.wifi-network-active label {
+  padding: 0;
+  margin: 0;
+}
+
+.wifi-network-signal {
+  font-size: 14px;
+  color: #cdd6f4;
+}
+
+.wifi-network-signal-saved {
+  font-size: 14px;
+  color: #a6e3a1;
+}
+
+.wifi-network-lock {
+  font-size: 11px;
+  color: rgba(205, 214, 244, 0.5);
+  min-width: 12px;
+}
+
+.wifi-network-name {
+  font-size: 12px;
+}
+
+.wifi-network-strength {
+  font-size: 11px;
+  color: rgba(205, 214, 244, 0.6);
+}
+
+// Секция пароля
+.wifi-password-section {
+  padding-top: 8px;
+  border-top: 1px solid rgba(205, 214, 244, 0.2);
+  margin-top: 5px;
+}
+
+.wifi-password-label {
+  font-size: 11px;
+  color: #cdd6f4;
+}
+
+.wifi-password-input {
+  background-color: rgba(205, 214, 244, 0.1);
+  border: 1px solid rgba(205, 214, 244, 0.3);
+  border-radius: 5px;
+  color: #cdd6f4;
+  padding: 5px 8px;
+  font-size: 12px;
+  min-height: 28px;
+}
+
+.wifi-password-input:focus {
+  border-color: #89b4fa;
+}
+
+.wifi-connect-btn {
+  padding: 5px 10px;
+  border-radius: 5px;
+  background-color: rgba(137, 180, 250, 0.3);
+  color: #89b4fa;
+  font-size: 11px;
+}
+
+.wifi-connect-btn:hover {
+  background-color: rgba(137, 180, 250, 0.5);
+}
+
+.wifi-cancel-btn {
+  padding: 5px 10px;
+  border-radius: 5px;
+  background-color: rgba(205, 214, 244, 0.1);
+  color: #cdd6f4;
+  font-size: 11px;
+}
+
+.wifi-cancel-btn:hover {
+  background-color: rgba(205, 214, 244, 0.2);
+}
+
+.wifi-rescan-btn {
+  padding: 5px 8px;
+  border-radius: 5px;
+  background-color: rgba(205, 214, 244, 0.05);
+  color: rgba(205, 214, 244, 0.6);
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.wifi-rescan-btn:hover {
+  background-color: rgba(205, 214, 244, 0.15);
+  color: #cdd6f4;
 }

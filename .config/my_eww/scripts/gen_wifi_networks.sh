@@ -25,12 +25,18 @@ nmcli -t -f IN-USE,SSID,SIGNAL,SECURITY device wifi list | \
             is_saved="0"
         fi
 
-        # Выводим в формате: is_saved:signal:in_use:ssid:security
-        # is_saved=1 для сохраненных (они будут первыми при сортировке по убыванию)
-        echo "$is_saved:$signal:$in_use:$ssid:$security"
+        # Определяем, подключены ли мы к этой сети
+        if [ "$ssid" = "$current_ssid" ]; then
+            is_current="1"
+        else
+            is_current="0"
+        fi
+
+        # Выводим в формате: is_current:is_saved:signal:in_use:ssid:security
+        echo "$is_current:$is_saved:$signal:$in_use:$ssid:$security"
     done | \
-    sort -t':' -k1,1rn -k2,2rn | \
-    while IFS=':' read -r is_saved signal in_use ssid security; do
+    sort -t':' -k1,1rn -k2,2rn -k3,3rn | \
+    while IFS=':' read -r is_current is_saved signal in_use ssid security; do
         # Определяем иконку по уровню сигнала
         if [ "$signal" -ge 75 ]; then
             signal_icon="󰤨"

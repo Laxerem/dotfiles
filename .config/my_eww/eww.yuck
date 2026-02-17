@@ -27,12 +27,17 @@
       )
     )
     (box :class "right" :orientation "horizontal" :halign "end" :space-evenly false
-      (box :class "wifi-name-box" :hexpand false
-        (label :text "${WIFI}" :limit-width 15 :truncate true)
-      )
-      (box :class "wifi-icon-box" :hexpand false :width 16 :height 16
-        (image :path "${WIFI == 'Без интернета' ? '/home/laxerem/.config/my_eww/icons/nowifi.svg' : (VPN_STATUS == 'VPN' ? '/home/laxerem/.config/my_eww/icons/vpn.svg' : '/home/laxerem/.config/my_eww/icons/wifi.svg')}"
-          :fit true
+      (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=true; ~/.config/my_eww/scripts/open_popup.sh wifi-popup"
+                :onhoverlost "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=false; ~/.config/my_eww/scripts/close_wifi_popup_delayed.sh &"
+        (box :orientation "horizontal" :space-evenly false
+          (box :class "wifi-name-box" :hexpand false
+            (label :text "${WIFI}" :limit-width 15 :truncate true)
+          )
+          (box :class "wifi-icon-box" :hexpand false :width 16 :height 16
+            (image :path "${WIFI == 'Без интернета' ? '/home/laxerem/.config/my_eww/icons/nowifi.svg' : (VPN_STATUS == 'VPN' ? '/home/laxerem/.config/my_eww/icons/vpn.svg' : '/home/laxerem/.config/my_eww/icons/wifi.svg')}"
+              :fit true
+            )
+          )
         )
       )
       (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ update volume_hover=true; ~/.config/my_eww/scripts/open_popup.sh volume-popup"
@@ -55,7 +60,7 @@
 
 (defwindow volume-popup
   :monitor 0
-  :geometry (geometry :x "25px" :y "0px" :width "100px" :height "100px" :anchor "top right")
+  :geometry (geometry :x "50px" :y "0px" :width "100px" :height "100px" :anchor "top right")
   :stacking "overlay"
   :windowtype "normal"
   :wm-ignore true
@@ -88,6 +93,49 @@
   )
 )
 
+(defwindow wifi-popup
+  :monitor 0
+  :geometry (geometry :x "170px" :y "0px" :width "250px" :height "10px" :anchor "top right")
+  :stacking "overlay"
+  :windowtype "normal"
+  :wm-ignore true
+  (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=true"
+            :onhoverlost "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=false; ~/.config/my_eww/scripts/close_wifi_popup_delayed.sh &"
+    (box :class "wifi-popup" :orientation "vertical" :spacing 5 :space-evenly false
+      (box :vexpand false
+        (label :class "wifi-popup-title" :text "󰤨 Wi-Fi сети" :xalign 0)
+      )
+      (box :vexpand false
+        (scroll :vscroll true :hscroll false :height 200
+          (literal :content wifi_networks)
+        )
+      )
+      (revealer :transition "slidedown" :reveal wifi_show_password :duration "200ms"
+        (box :class "wifi-password-section" :orientation "vertical" :spacing 5 :space-evenly false
+          (box :vexpand false
+            (label :class "wifi-password-label" :text "Пароль для ${wifi_connect_ssid}:" :xalign 0 :limit-width 30 :truncate true)
+          )
+          (box :vexpand false
+            (input :class "wifi-password-input"
+                   :password true
+                   :value wifi_password
+                   :onchange "eww -c /home/laxerem/.config/my_eww/ update wifi_password='{}'"
+                   :onaccept "~/.config/my_eww/scripts/connect_wifi.sh '${wifi_connect_ssid}' 'new' '{}' &")
+          )
+          (box :orientation "horizontal" :spacing 5 :space-evenly true :vexpand false
+            (button :class "wifi-connect-btn"
+                    :onclick "~/.config/my_eww/scripts/connect_wifi.sh '${wifi_connect_ssid}' 'new' '${wifi_password}' &"
+                    (label :text "Подключить"))
+            (button :class "wifi-cancel-btn"
+                    :onclick "eww -c /home/laxerem/.config/my_eww/ update wifi_show_password=false wifi_connect_ssid='' wifi_password=''"
+                    (label :text "Отмена"))
+          )
+        )
+      )
+    )
+  )
+)
+
 (defwidget time [time]
     (eventbox :cursor "pointer"
               :onclick ""
@@ -99,6 +147,10 @@
 )
 
 (defvar volume_hover false)
+(defvar wifi_hover false)
+(defvar wifi_show_password false)
+(defvar wifi_connect_ssid "")
+(defvar wifi_password "")
 
 (defpoll BATTERY :interval "5s" "cat /sys/class/power_supply/BAT1/capacity | tr -d '\\n'")
 (defpoll CHARGE_STATUS :interval "0.1s" "cat /sys/class/power_supply/BAT1/status | tr -d '\\n'")
@@ -113,3 +165,4 @@
 (defpoll VOLUME_MUTED :interval "0.5s" "pamixer --get-mute")
 (defpoll HEADPHONES :interval "2s" "pactl get-default-sink | grep -q 'bluez_output\\|headphone\\|headset' && echo 'true' || echo 'false'")
 (deflisten audio_sinks :initial "" "bash -c 'while true; do ~/.config/my_eww/scripts/gen_audio_sinks.sh; sleep 3; done'")
+(deflisten wifi_networks :initial "" "bash -c 'while true; do ~/.config/my_eww/scripts/gen_wifi_networks.sh; sleep 3; done'")
