@@ -186,6 +186,45 @@ eww -c /home/laxerem/.config/my_eww/ update variable_name="value"
 eww -c /home/laxerem/.config/my_eww/ list-windows
 ```
 
+## КРИТИЧЕСКИ ВАЖНО: Всплывающие окна (popup) — правила открытия/закрытия
+
+### Как НЕ надо делать
+
+**НИКОГДА не добавляй `:focusable true` на popup-окна.** Это заставляет Hyprland отдавать им фокус, после чего окно блокирует весь экран и перехватывает весь ввод. Пользователю приходится перезапускать систему.
+
+**НИКОГДА не делай сложные скрипты закрытия с проверкой позиции курсора через `hyprctl cursorpos`.** Это ненадёжно и создаёт race conditions.
+
+### Правильный паттерн (по аналогии с volume-popup)
+
+Все popup-окна должны следовать одному и тому же простому паттерну:
+
+**В баре** (eventbox на виджете):
+```yuck
+:onhover "eww -c ... update hover_var=true; ~/.config/.../open_popup.sh popup-name"
+:onhoverlost "eww -c ... update hover_var=false; ~/.config/.../close_popup_delayed.sh popup-name hover_var &"
+```
+
+**В самом popup** (внешний eventbox):
+```yuck
+:onhover "eww -c ... update hover_var=true"
+:onhoverlost "eww -c ... update hover_var=false; eww -c ... close popup-name"
+```
+
+**Параметры окна** — только так:
+```yuck
+(defwindow my-popup
+  :stacking "overlay"
+  :windowtype "normal"
+  :wm-ignore true
+  ; БЕЗ :focusable true — никогда!
+```
+
+`close_popup_delayed.sh` — универсальный скрипт, работает для любого popup. Отдельные скрипты закрытия для каждого popup не нужны.
+
+### Следствие
+
+Без `:focusable true` поле ввода (`input`) внутри popup не получает фокус клавиатуры. Если нужен ввод текста — использовать внешний диалог (rofi и т.п.), а не встроенный `input` в eww.
+
 ## Траблшутинг
 
 ### Проблема: Отступы не изменяются при изменении CSS

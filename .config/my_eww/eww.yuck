@@ -28,7 +28,7 @@
     )
     (box :class "right" :orientation "horizontal" :halign "end" :space-evenly false
       (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=true; ~/.config/my_eww/scripts/open_popup.sh wifi-popup"
-                :onhoverlost "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=false; ~/.config/my_eww/scripts/close_wifi_popup_delayed.sh &"
+                :onhoverlost "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=false; ~/.config/my_eww/scripts/close_popup_delayed.sh wifi-popup wifi_hover &"
         (box :orientation "horizontal" :space-evenly false
           (box :class "wifi-name-box" :hexpand false
             (label :text "${WIFI}" :limit-width 15 :truncate true)
@@ -95,13 +95,12 @@
 
 (defwindow wifi-popup
   :monitor 0
-  :geometry (geometry :x "170px" :y "0px" :width "250px" :height "10px" :anchor "top right")
+  :geometry (geometry :x "130px" :y "0px" :width "250px" :height "10px" :anchor "top right")
   :stacking "overlay"
   :windowtype "normal"
   :wm-ignore true
-  :focusable true
   (eventbox :onhover "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=true"
-            :onhoverlost "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=false; ~/.config/my_eww/scripts/close_wifi_popup_delayed.sh &"
+            :onhoverlost "eww -c /home/laxerem/.config/my_eww/ update wifi_hover=false; eww -c /home/laxerem/.config/my_eww/ close wifi-popup; eww -c /home/laxerem/.config/my_eww/ update wifi_show_password=false wifi_connect_ssid='' wifi_password=''"
     (box :class "wifi-popup" :orientation "vertical" :spacing 5 :space-evenly false
       (box :vexpand false
         (label :class "wifi-popup-title" :text "󰤨 Wi-Fi сети" :xalign 0)

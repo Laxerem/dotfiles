@@ -1,9 +1,11 @@
 #!/bin/bash
 
-# Закрывает wifi-popup с задержкой, проверяя реальную позицию курсора.
+# Закрывает wifi-popup с задержкой.
+# Аргумент "from_popup" — вызов из самого popup, проверку позиции пропускаем.
 
 EWW="eww -c /home/laxerem/.config/my_eww"
 BAR_HEIGHT=35
+FROM_POPUP="${1:-}"
 
 sleep 0.3
 
@@ -12,7 +14,14 @@ if [ "$($EWW get wifi_show_password)" = "true" ]; then
     exit 0
 fi
 
-# Получаем позицию курсора через hyprctl
+if [ "$FROM_POPUP" = "from_popup" ]; then
+    # Курсор вышел из самого popup — закрываем без лишних проверок
+    $EWW close wifi-popup 2>/dev/null
+    $EWW update wifi_show_password=false wifi_connect_ssid='' wifi_password=''
+    exit 0
+fi
+
+# Вызов из бара — проверяем реальную позицию курсора
 CURSOR_JSON=$(hyprctl cursorpos -j 2>/dev/null)
 CX=$(echo "$CURSOR_JSON" | jq -r '.x' 2>/dev/null)
 CY=$(echo "$CURSOR_JSON" | jq -r '.y' 2>/dev/null)
@@ -26,7 +35,7 @@ if [ -z "$CX" ] || [ "$CX" = "null" ]; then
     exit 0
 fi
 
-# Курсор на баре (верхние 35px экрана) — не закрываем
+# Курсор на баре (верхние 35px) — не закрываем
 if [ "$CY" -lt "$BAR_HEIGHT" ] 2>/dev/null; then
     exit 0
 fi
