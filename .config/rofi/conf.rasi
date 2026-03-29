@@ -1,0 +1,72 @@
+configuration {
+    show-icons: true;
+    icon-theme: "Papirus";
+    display-drun: "find: ";
+    drun-display-format: "{name}";
+}
+
+element-icon {
+    padding: 0 0 0 10px;
+    size: 27px;
+}
+
+/*
+ * ROFI color theme
+ *
+ * Based on Something Found in the Internet
+ *
+ * User: Contributors
+ * Copyright: *!
+ */
+
+* {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  spacing: 0;
+
+  bg: rgba(0,0,0,0.4);
+  bg-alt: #232323;
+  fg: #FFFFFF;
+  fg-alt: #424242;
+
+  background-color: @bg;
+  text-color: @fg;
+}
+
+window {
+  transparency: "real";
+}
+
+mainbox {
+  children: [inputbar, listview];
+}
+
+inputbar {
+  children: [prompt, entry];
+}
+
+entry {
+  padding: 12px 0;
+}
+
+prompt {
+  padding: 12px;
+}
+
+listview {
+  lines: 8;
+}
+
+element {
+  children: [element-icon,element-text];
+}
+
+element-text {
+  padding: 12px;
+  text-color: @fg-alt;
+}
+
+element-text selected {
+  text-color: @fg;
+}
