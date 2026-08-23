@@ -1,0 +1,81 @@
+/* Фон всей панели */
+* {
+    font-family: "JetBrains Mono Nerd Font", monospace;
+    font-size: 15px;
+    transition: 0.5s;
+}
+
+.temp_cold {
+    color: #1DB0E0
+}
+
+.temp_normal {
+    color: white;
+}
+
+.temp_warm {
+    color: rgb(130, 218, 15);
+}
+
+.temp_hot {
+    color: rgb(255, 115, 0);
+}
+
+.temp_very_hot {
+    color: rgb(255, 72, 0);
+}
+
+.temp_critical {
+    color: red;
+    border-bottom: solid 2px red;
+}
+
+window#waybar {
+    background-color: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    transition-property: background-color;
+    transition-duration: .5s;
+}
+
+/* Специфично для модулей */
+#clock {
+    color: rgba(255,255,255,0.7);
+    padding: 0 20px;
+    font-size: 18px;
+}
+
+#battery {
+    color: #b8bb26;
+}
+
+/* Наведение мыши на модуль */
+#clock:hover {
+    color: white;
+}
+
+#network {
+    margin-left: 20px;
+}
+
+#backlight {
+    margin-left: 20px;
+}
+
+#pulseaudio {
+    font-size: 14px;
+    color: white;
+    border-radius: 15px;
+    margin: 0px 15px 0px 0px;
+}
+
+#pulseaudio.muted {
+    color: white;
+}
+
+#custom-cpu_usage {
+    margin-left: 20px;
+}
+
+#memory {
+    margin-left: 20px;
+}

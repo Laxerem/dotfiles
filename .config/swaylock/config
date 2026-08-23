@@ -1,0 +1,23 @@
+# Цвет фона (чёрный с прозрачностью)
+color=00000088
+
+# Блюр обоев
+effect-blur=7x5
+
+# Индикатор ввода
+indicator-radius=100
+indicator-thickness=15
+indicator-caps-lock
+
+# Цвета индикатора
+key-hl-color=88c0d0
+bs-hl-color=bf616a
+inside-color=2e3440cc
+ring-color=4c566acc
+text-color=d8dee9ff
+line-color=00000000
+separator-color=00000000
+
+# Время/дату можно включить
+show-failed-attempts
+

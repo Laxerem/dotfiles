@@ -1,0 +1,83 @@
+{
+    "layer": "top",
+    "margin-top": "10",
+    "height": "30",  
+    "line-height": "30px",
+
+    "font-family": "JetBrains Mono Nerd Font, Noto Color Emoji, FontAwesome, sans-serif",
+
+    "style": "~/.config/waybar/style.css",
+    "modules-left": ["sway/workspaces", "sway/mode", "network", "backlight", "memory"],
+    "modules-center": ["sway/window", "custom/cpu_temp"],
+    "modules-right": ["custom/keyboard", "battery", "clock", "pulseaudio"],
+    
+    "sway/window": {
+        "max-length": 50
+    },
+    
+    "custom/cpu_temp": {
+        "exec": "~/.config/waybar/scripts/cpu_temp.sh",
+        "interval": 2,
+        "return-type": "json"
+    },
+    "custom/cpu_usage": {
+        "exec": "~/.config/waybar/scripts/cpu_usage.sh",
+        "interval": 2,
+        "format": "{}",
+        "tooltip": true,
+        "on-click": "kitty htop"
+    },    
+    "battery": {
+        "format": "{capacity}% {icon}",
+        "format-icons": ["", "", "", "", ""]
+    },
+    
+    "clock": {
+        "format-alt": "{:%a, %d. %b  %H:%M}"
+    },
+
+    "network": {
+        // "interface": "wlp2*", // (Optional) To force the use of this interface
+        "format-wifi": "{essid} ({signalStrength}%) ",
+        "format-ethernet": "{ipaddr}/{cidr} ",
+        "tooltip-format": "{ifname} via {gwaddr} ",
+        "format-linked": "{ifname} (No IP) ",
+        "format-disconnected": "Disconnected ⚠",
+        "format-alt": "{ifname}: {ipaddr}/{cidr}"
+    },
+        
+    "memory": {
+        "format": "{used} / {total} MB",
+        "interval": 2
+    },
+
+    "custom/keyboard": {
+
+    },
+
+    "backlight": {
+        "device": "intel_backlight", // у тебя не Intel, поэтому надо проверить
+        "format": "{percent}%",
+        "interval": 2
+    },
+
+    "pulseaudio": {
+        // "scroll-step": 1, // %, can be a float
+        "format": "{icon}   {volume}%",
+        "format-bluetooth": "{volume}% {icon} {format_source}",
+        "format-bluetooth-muted": " {icon} {format_source}",
+        "format-muted": " {format_source}",
+        "format-source": "{volume}% ",
+        "format-source-muted": "",
+        "format-icons": {
+        "headphone": "🎧",
+        "hands-free": " ",
+        "headset": "🎧 ",
+        "phone": " ",
+        "portable": " ",
+        "car": " ",
+        "default": [" ", " ", " "]
+        },
+        "on-click": "pavucontrol"
+    }
+}
