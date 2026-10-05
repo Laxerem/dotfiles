@@ -47,6 +47,7 @@ EXCLUDES=(
   --exclude='*.save'
   --exclude='wallpapers/'
   --exclude='*.tmp*'
+  --exclude='__pycache__/'
 )
 
 RSYNC_OPTS=(-av --delete)
