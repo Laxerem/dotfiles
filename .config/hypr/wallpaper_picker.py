@@ -16,7 +16,8 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("Gsk", "4.0")
 gi.require_version("Graphene", "1.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Graphene, Gsk, Gtk
+gi.require_version("Pango", "1.0")
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Graphene, Gsk, Gtk, Pango
 
 WALL_DIR = Path.home() / ".config/hypr/wallpapers"
 EXTS = {".png", ".jpg", ".jpeg"}
@@ -25,7 +26,19 @@ THUMB_W, THUMB_H, RADIUS = 176, 99, 10
 LOCK_CONF = Path.home() / ".config/hypr/lockscreen.conf"  # подключается в hyprlock.conf, читается lock.sh
 LOCKFX = Path.home() / ".config/hypr/lockfx.py"
 LOCK_EFFECTS = (("none", "Без эффекта"), ("dust", "Пыль"), ("snow", "Снег"), ("fireflies", "Светлячки"))
-TABS = (("desktop", "Рабочий стол"), ("lock", "Экран блокировки"))
+TABS = (("desktop", "Рабочий стол"), ("lock", "Экран блокировки"))  # вкладки с сеткой обоев
+TEXT_TAB = ("text", "Текст")
+# Текст на экране блокировки (рисует lockfx.py): настройки — в lockscreen.conf, фразы — в PHRASES_FILE
+PHRASES_FILE = Path.home() / ".config/hypr/lockscreen-phrases.txt"
+TEXT_ANIMS = (("typewriter", "Печатная машинка"), ("fade", "Плавное появление"))
+DEFAULT_TEXT_FONT = "Cormorant Garamond Medium Italic 21"  # как в lockfx.py
+DEFAULT_TEXT_SPEED, MIN_TEXT_SPEED, MAX_TEXT_SPEED = 100, 20, 250  # мс на букву
+# Задержки текста, с: ключ lockscreen.conf, подпись, по умолчанию (как в lockfx.py), минимум, максимум
+TEXT_DELAYS = (
+    ("lock_text_idle", "Появление через", 2.5, 0.5, 60),
+    ("lock_text_hold", "Показ фразы", 5.5, 1, 60),
+    ("lock_text_gap", "Пауза между фразами", 0.9, 0, 30),
+)
 
 # Пользовательский ~/.config/gtk-4.0/gtk.css (тема Space-transparency) грузится с приоритетом USER
 # и ломает виджеты, поэтому стили приложения заданы явно и подключаются поверх него.
@@ -82,6 +95,59 @@ window.wp .fxchoice button {
 }
 window.wp .fxchoice button:hover { color: #d4d7de; }
 window.wp .fxchoice button:checked { background: #3a404b; color: #ffffff; }
+
+window.wp .textpage { padding: 14px 16px; }
+window.wp .textpage .caption { font-size: 12px; color: #9298a4; }
+window.wp .textpage .hint { font-size: 11px; color: #6c7280; }
+window.wp .textpage .dim { opacity: 0.45; }
+
+window.wp switch {
+  background: #2c313a; background-image: none; border: 1px solid #343a45; border-radius: 12px;
+  box-shadow: none; min-width: 40px; min-height: 22px;
+}
+window.wp switch:checked { background: #5a7fd0; border-color: #6b8fe0; }
+window.wp switch slider {
+  background: #d4d7de; background-image: none; border: none; box-shadow: none;
+  border-radius: 10px; min-width: 18px; min-height: 18px; margin: 2px;
+}
+window.wp switch image { color: transparent; }
+
+window.wp scale { min-width: 220px; padding: 6px 0; }
+
+window.wp spinbutton {
+  background: #262a32; background-image: none; color: #d4d7de; border: 1px solid #30353e;
+  border-radius: 8px; box-shadow: none; min-height: 28px; font-size: 12px;
+}
+window.wp spinbutton text { background: transparent; color: #d4d7de; padding: 0 8px; min-width: 40px; }
+window.wp spinbutton button {
+  background: transparent; background-image: none; color: #9298a4; border: none; box-shadow: none;
+  min-height: 26px; min-width: 26px; padding: 0;
+}
+window.wp spinbutton button:hover { color: #ffffff; background: #2f343d; }
+window.wp spinbutton button image { -gtk-icon-size: 12px; }
+window.wp scale trough { background: #2c313a; border: none; border-radius: 3px; min-height: 4px; }
+window.wp scale highlight { background: #7aa2f7; border-radius: 3px; }
+window.wp scale slider {
+  background: #d4d7de; background-image: none; border: none; box-shadow: none;
+  border-radius: 9px; min-width: 16px; min-height: 16px; margin: -7px;
+}
+window.wp scale marks label { font-size: 10px; color: #6c7280; }
+
+window.wp fontdialogbutton > button, window.wp button.font {
+  background: #262a32; background-image: none; color: #d4d7de; border: 1px solid #30353e;
+  border-radius: 8px; box-shadow: none; min-height: 28px; padding: 0 12px; font-size: 12px;
+}
+window.wp fontdialogbutton > button:hover { background: #2f343d; }
+window.wp fontdialogbutton label { color: #d4d7de; }
+
+window.wp .phrases {
+  background: #1b1e24; border: 1px solid #2c313a; border-radius: 10px;
+}
+window.wp .phrases textview, window.wp .phrases textview text {
+  background: transparent; color: #d4d7de; font-size: 13px;
+}
+window.wp .phrases textview { padding: 8px 10px; }
+window.wp .phrases textview text selection { background: #3a4a6b; }
 
 window.wp .toast {
   background: rgba(30, 34, 41, 0.95); color: #e6e8ec; border: 1px solid #343a45;
@@ -162,6 +228,36 @@ def set_lock_effect(fx):
     update_lock_conf(lock_fx=fx)
 
 
+def get_text_settings():
+    conf = read_lock_conf()
+    try:
+        speed = int(conf.get("lock_text_speed", DEFAULT_TEXT_SPEED))
+    except ValueError:
+        speed = DEFAULT_TEXT_SPEED
+    anim = conf.get("lock_text_anim", TEXT_ANIMS[0][0])
+    return {
+        "enabled": conf.get("lock_text", "on") != "off",
+        "font": conf.get("lock_text_font") or DEFAULT_TEXT_FONT,
+        "speed": min(max(speed, MIN_TEXT_SPEED), MAX_TEXT_SPEED),
+        "anim": anim if anim in dict(TEXT_ANIMS) else TEXT_ANIMS[0][0],
+        "delays": {key: conf_seconds(conf, key, default, lo, hi) for key, _, default, lo, hi in TEXT_DELAYS},
+    }
+
+
+def conf_seconds(conf, key, default, lo, hi):
+    try:
+        return min(max(float(conf.get(key, default)), lo), hi)
+    except ValueError:
+        return default
+
+
+def read_phrases():
+    try:
+        return PHRASES_FILE.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
 def unique_dest(name):
     dest = WALL_DIR / name
     n = 1
@@ -234,9 +330,9 @@ class Window(Gtk.ApplicationWindow):
 
         header = Gtk.HeaderBar(show_title_buttons=False)
         add_btn = self.tool_button("list-add-symbolic", "Добавить", self.on_add)
-        rand_btn = self.tool_button("media-playlist-shuffle-symbolic", "Случайные", self.on_random)
+        self.rand_btn = self.tool_button("media-playlist-shuffle-symbolic", "Случайные", self.on_random)
         header.pack_start(add_btn)
-        header.pack_end(rand_btn)
+        header.pack_end(self.rand_btn)
         self.set_titlebar(header)
 
         self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
@@ -261,7 +357,8 @@ class Window(Gtk.ApplicationWindow):
                 self.stack.add_titled(page, tab, title)
             else:
                 self.stack.add_titled(scroll, tab, title)
-        self.stack.connect("notify::visible-child-name", lambda *_: self.mark_current())
+        self.stack.add_titled(self.text_page(), *TEXT_TAB)
+        self.stack.connect("notify::visible-child-name", self.on_tab_changed)
         header.set_title_widget(Gtk.StackSwitcher(stack=self.stack))
 
         self.empty = Gtk.Label(
@@ -286,6 +383,7 @@ class Window(Gtk.ApplicationWindow):
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", lambda _c, key, *_: key == Gdk.KEY_Escape and (self.close() or True))
         self.add_controller(keys)
+        self.connect("close-request", lambda *_: self.flush_pending() or False)
 
         self.paths = []
         self.current_desktop = None
@@ -319,12 +417,160 @@ class Window(Gtk.ApplicationWindow):
         bar.append(preview)
         return bar
 
+    def text_page(self):
+        """Текст экрана блокировки: вкл/выкл, анимация, шрифт, скорость, задержки и сами фразы."""
+        conf = get_text_settings()
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, css_classes=["textpage"])
+        grid = Gtk.Grid(row_spacing=10, column_spacing=14)
+
+        def row(n, title, widget, col=0):
+            grid.attach(Gtk.Label(label=title, xalign=0, css_classes=["caption"]), col, n, 1, 1)
+            grid.attach(widget, col + 1, n, 1, 1)
+
+        enabled = Gtk.Switch(active=conf["enabled"], halign=Gtk.Align.START, valign=Gtk.Align.CENTER)
+        enabled.connect("notify::active", self.on_text_enabled)
+        row(0, "Показывать текст", enabled)
+
+        anims = Gtk.Box(css_classes=["fxchoice"], halign=Gtk.Align.START)
+        group = None
+        for anim, title in TEXT_ANIMS:
+            btn = Gtk.ToggleButton(label=title, active=anim == conf["anim"], group=group)
+            group = group or btn
+            btn.connect("toggled", self.on_text_anim_toggled, anim)
+            anims.append(btn)
+        row(1, "Анимация", anims)
+
+        font = Gtk.FontDialogButton(
+            dialog=Gtk.FontDialog(title="Шрифт текста"),
+            font_desc=Pango.FontDescription.from_string(conf["font"]),
+            use_font=True, use_size=False, halign=Gtk.Align.START,
+        )
+        font.connect("notify::font-desc", self.on_text_font)
+        row(2, "Шрифт", font)
+
+        # Слева — медленно, справа — быстро. В конфиге — мс на букву (меньше — быстрее),
+        # поэтому значение шкалы зеркальное: text_speed_ms() переводит обратно
+        speed = Gtk.Scale(
+            adjustment=Gtk.Adjustment(value=self.text_speed_ms(conf["speed"]), lower=MIN_TEXT_SPEED,
+                                      upper=MAX_TEXT_SPEED, step_increment=5, page_increment=20),
+            draw_value=False, hexpand=True, margin_start=24, margin_end=24,
+        )
+        speed.add_mark(MIN_TEXT_SPEED, Gtk.PositionType.BOTTOM, "медленно")
+        speed.add_mark(self.text_speed_ms(DEFAULT_TEXT_SPEED), Gtk.PositionType.BOTTOM, "обычно")
+        speed.add_mark(MAX_TEXT_SPEED, Gtk.PositionType.BOTTOM, "быстро")
+        speed.connect("value-changed", lambda sc: self.save_later(
+            "lock_text_speed", lambda: self.text_speed_ms(sc.get_value())))
+        grid.attach(Gtk.Label(label="Скорость", xalign=0, css_classes=["caption"]), 0, 3, 1, 1)
+        grid.attach(speed, 1, 3, 3, 1)  # на всю ширину, под обеими колонками
+
+        # Задержки — правая колонка
+        delays = []
+        for n, (key, title, _default, lo, hi) in enumerate(TEXT_DELAYS):
+            spin = Gtk.SpinButton(
+                adjustment=Gtk.Adjustment(value=conf["delays"][key], lower=lo, upper=hi,
+                                          step_increment=0.5, page_increment=5),
+                digits=1, numeric=True, valign=Gtk.Align.CENTER,
+            )
+            spin.connect("value-changed", lambda sp, key=key: self.save_later(
+                key, lambda: f"{sp.get_value():g}"))
+            box = Gtk.Box(spacing=6, halign=Gtk.Align.START)
+            box.append(spin)
+            box.append(Gtk.Label(label="с", css_classes=["caption"]))
+            row(n, title, box, col=2)
+            delays.append(box)
+        self.pending_saves = {}
+
+        page.append(grid)
+
+        head = Gtk.Box(spacing=10)
+        head.append(Gtk.Label(label="Фразы", xalign=0, css_classes=["caption"]))
+        head.append(Gtk.Label(label="по одной на строку, # — комментарий", xalign=0, hexpand=True,
+                              css_classes=["hint"]))
+        head.append(self.tool_button("media-playback-start-symbolic", "Предпросмотр", self.on_preview))
+        page.append(head)
+
+        self.phrases = Gtk.TextBuffer(text=read_phrases())
+        self.phrases.connect("changed", self.on_phrases_changed)
+        self.phrases_save_id = 0
+        view = Gtk.TextView(buffer=self.phrases, wrap_mode=Gtk.WrapMode.WORD_CHAR)
+        page.append(Gtk.ScrolledWindow(child=view, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER,
+                                       css_classes=["phrases"]))
+
+        # Без текста остальные настройки ни на что не влияют — приглушаем их
+        self.text_controls = [anims, font, speed, *delays]
+        self.update_text_controls(conf["enabled"])
+        return page
+
+    @staticmethod
+    def text_speed_ms(value):
+        """Значение шкалы скорости ↔ мс на букву (преобразование симметричное)."""
+        return MIN_TEXT_SPEED + MAX_TEXT_SPEED - round(value)
+
+    def update_text_controls(self, enabled):
+        for widget in self.text_controls:
+            widget.set_sensitive(enabled)
+
+    def on_text_enabled(self, switch, _pspec):
+        enabled = switch.get_active()
+        update_lock_conf(lock_text="on" if enabled else "off")
+        self.update_text_controls(enabled)
+        self.show_toast("Текст включён" if enabled else "Текст выключен")
+
+    def on_text_anim_toggled(self, btn, anim):
+        if btn.get_active():
+            update_lock_conf(lock_text_anim=anim)
+            self.show_toast(f"Анимация: {dict(TEXT_ANIMS)[anim]}")
+
+    def on_text_font(self, btn, _pspec):
+        if desc := btn.get_font_desc():
+            update_lock_conf(lock_text_font=desc.to_string())
+            self.show_toast(f"Шрифт: {desc.to_string()}")
+
+    def save_later(self, key, value):
+        """Записать key = value() в lockscreen.conf, когда ползунок/счётчик остановится, а не на каждый шаг."""
+        if key in self.pending_saves:
+            GLib.source_remove(self.pending_saves[key][0])
+        source = GLib.timeout_add(300, self.save_now, key)
+        self.pending_saves[key] = (source, value)
+
+    def save_now(self, key):
+        _, value = self.pending_saves.pop(key)
+        update_lock_conf(**{key: value()})
+        return GLib.SOURCE_REMOVE
+
+    def on_phrases_changed(self, _buffer):
+        if self.phrases_save_id:
+            GLib.source_remove(self.phrases_save_id)
+        self.phrases_save_id = GLib.timeout_add(500, self.save_phrases)
+
+    def save_phrases(self):
+        self.phrases_save_id = 0
+        text = self.phrases.get_text(self.phrases.get_start_iter(), self.phrases.get_end_iter(), False)
+        PHRASES_FILE.write_text(text if text.endswith("\n") or not text else text + "\n", encoding="utf-8")
+        return GLib.SOURCE_REMOVE
+
+    def flush_pending(self):
+        """Несохранённые изменения (ползунки, задержки, фразы) — записать сейчас."""
+        for key in list(self.pending_saves):
+            GLib.source_remove(self.pending_saves[key][0])
+            self.save_now(key)
+        if self.phrases_save_id:
+            GLib.source_remove(self.phrases_save_id)
+            self.save_phrases()
+
+    def on_tab_changed(self, *_):
+        grid_tab = self.stack.get_visible_child_name() != TEXT_TAB[0]
+        self.rand_btn.set_visible(grid_tab)
+        self.empty.set_visible(grid_tab and not self.paths)
+        self.mark_current()
+
     def on_effect_toggled(self, btn, fx):
         if btn.get_active():
             set_lock_effect(fx)
             self.show_toast(f"Эффект: {dict(LOCK_EFFECTS)[fx]}")
 
     def on_preview(self, _btn):
+        self.flush_pending()
         cmd = [sys.executable, str(LOCKFX), "--effect", get_lock_effect(), "--preview"]
         if bg := get_lock_wallpaper():
             cmd += ["--image", str(bg)]
@@ -337,8 +583,7 @@ class Window(Gtk.ApplicationWindow):
                 flow.remove(child)
             for path in self.paths:
                 flow.append(self.make_item(path))
-        self.empty.set_visible(not self.paths)
-        self.mark_current()
+        self.on_tab_changed()
         threading.Thread(target=self.load_thumbs, daemon=True).start()
 
     def children(self, tab):
