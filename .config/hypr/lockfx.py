@@ -9,12 +9,18 @@
 lock.sh запускает его под hyprlock с прозрачным фоном (misc:session_lock_xray),
 поэтому поверх видны только часы и поле ввода.
 
+Пока компьютер простаивает, на месте поля ввода появляются фразы из
+lockscreen-phrases.txt (как подсказки на загрузочном экране в играх) — печатаются
+по буквам или плавно проявляются целиком ($lock_text_anim); при вводе
+текст растворяется, а hyprlock показывает поле ввода. Простой определяется
+по протоколу ext-idle-notify.
+
   lockfx.py --effect dust --image /path/to/wall.jpg     # для lock.sh
   lockfx.py --effect dust --image ... --preview         # предпросмотр, закрыть — клик/клавиша
 
 Протокол с lock.sh: когда переход к экрану блокировки закончен, печатает «ready»
 (только после этого запускается hyprlock — его запуск не мешает анимации);
-SIGUSR2 — погасить частицы (в момент ввода пароля, вместе с часами hyprlock);
+SIGUSR2 — погасить частицы и текст (в момент ввода пароля, вместе с часами hyprlock);
 SIGUSR1 — обратный переход и выход.
 """
 
@@ -43,7 +49,7 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("Gsk", "4.0")
 gi.require_version("Graphene", "1.0")
 gi.require_version("Gtk4LayerShell", "1.0")
-from gi.repository import Gdk, GLib, Graphene, Gsk, Gtk
+from gi.repository import Gdk, GLib, Graphene, Gsk, Gtk, Pango
 from gi.repository import Gtk4LayerShell as LayerShell
 
 try:
@@ -63,6 +69,30 @@ FINAL_FADE = 0.35     # в конце разблокировки слой рас
 FX_IN = 1.6           # частицы проявляются после перехода, с
 FX_OUT = 0.35         # и гаснут первыми при разблокировке
 MAX_DT = 1 / 40       # шаг анимации не больше этого: после подвисания — продолжаем, а не прыгаем
+
+# Текст на экране блокировки. Шрифт, скорость, анимация и вкл/выкл задаются в «Обоях» и хранятся
+# в lockscreen.conf ($lock_text, $lock_text_font, $lock_text_speed, $lock_text_anim), фразы — в PHRASES_FILE.
+LOCK_CONF = os.path.expanduser("~/.config/hypr/lockscreen.conf")
+PHRASES_FILE = os.path.expanduser("~/.config/hypr/lockscreen-phrases.txt")
+DEFAULT_PHRASES = ["Даже самая долгая ночь заканчивается рассветом.", "Отдых — это тоже часть пути."]
+DEFAULT_FONT = "Cormorant Garamond Medium Italic 21"
+DEFAULT_SPEED_MS = 100  # средняя пауза между буквами
+TEXT_ANIMS = ("typewriter", "fade")  # печатная машинка / плавное появление
+FADE_CHARS = 12       # плавное появление длится столько «букв» (100 мс → 1.2 с)
+FADE_RISE = 10        # и всплывает снизу на столько пикселей
+TEXT_Y = 100          # на месте поля ввода: position = 0, -100 в hyprlock-widgets.conf
+# Задержки по умолчанию; настраиваются в «Обоях» ($lock_text_idle, $lock_text_hold, $lock_text_gap)
+IDLE_SHOW = 2.5       # текст появляется после стольких секунд без ввода
+IDLE_AFTER_INPUT = 10 # а если уже начинали вводить — позже, чтобы не лечь поверх точек пароля
+HOLD_TIME = 5.5       # фраза напечатана — держим (курсор мигает)
+ERASE_SPEED = 0.35    # стирание «бэкспейсом» быстрее печати во столько раз
+GAP_TIME = 0.9        # пустая строка с мигающим курсором перед следующей фразой
+DASH_PAUSE = 8        # перед подписью автора машинка «задумывается» на столько букв
+AUTHOR_SCALE = 0.82   # подпись автора мельче цитаты
+AUTHOR_ALPHA = 0.7    # и приглушённее
+AUTHOR_GAP = 7        # отступ между цитатой и подписью, px
+BLINK_PERIOD = 1.05   # период мигания курсора, с
+HIDE_TIME = 0.25      # быстрое исчезновение при вводе
 
 
 def ease_out_cubic(k):
@@ -229,6 +259,261 @@ class Fireflies(Effect):
 EFFECT_CLASSES = {"none": None, "dust": Dust, "snow": Snow, "fireflies": Fireflies}
 
 
+def read_lock_conf():
+    values = {}
+    try:
+        with open(LOCK_CONF, encoding="utf-8") as f:
+            for line in f:
+                key, sep, value = line.partition("=")
+                if sep and key.strip().startswith("$"):
+                    values[key.strip()[1:]] = value.strip()
+    except OSError:
+        pass
+    return values
+
+
+def conf_seconds(conf, key, default):
+    try:
+        return max(0.0, float(conf.get(key, default)))
+    except ValueError:
+        return default
+
+
+def split_quote(phrase):
+    """«Цитата - Автор» → (цитата, автор). Автор — после последнего тире между пробелами,
+    если это похоже на имя: с заглавной буквы и недлинное. Иначе фраза остаётся как есть."""
+    for i in range(len(phrase) - 1, 0, -1):
+        if phrase[i] in "-–—" and phrase[i - 1].isspace() and phrase[i + 1:i + 2].isspace():
+            quote, author = phrase[:i].rstrip(), phrase[i + 1:].strip().rstrip(".")
+            if quote and author[:1].isupper() and len(author) <= 40 and len(author.split()) <= 5:
+                return quote, author
+            break
+    return phrase.strip(), None
+
+
+def load_phrases():
+    try:
+        with open(PHRASES_FILE, encoding="utf-8") as f:
+            phrases = [line.strip() for line in f if line.strip() and not line.lstrip().startswith("#")]
+    except OSError:
+        phrases = []
+    return phrases or DEFAULT_PHRASES
+
+
+class IdleWatcher:
+    """ext-idle-notify: idled — нет ввода timeout секунд, resumed — ввод появился.
+
+    Отдельное Wayland-соединение (pywayland), встроенное в главный цикл GLib.
+    Работает и под экраном блокировки — так же, как hypridle.
+    """
+
+    def __init__(self, timeout, on_idle, on_resume):
+        from pywayland.client import Display
+        from pywayland.protocol.ext_idle_notify_v1 import ExtIdleNotifierV1
+        from pywayland.protocol.wayland import WlSeat
+
+        self.display = Display()
+        self.display.connect()
+        found = {}
+
+        def on_global(registry, name, interface, version):
+            if interface == "wl_seat" and "seat" not in found:
+                found["seat"] = registry.bind(name, WlSeat, min(version, 7))
+            elif interface == "ext_idle_notifier_v1":
+                found["notifier"] = (registry.bind(name, ExtIdleNotifierV1, min(version, 2)), version)
+
+        registry = self.display.get_registry()
+        registry.dispatcher["global"] = on_global
+        self.display.roundtrip()
+        if "seat" not in found or "notifier" not in found:
+            raise RuntimeError("нет ext_idle_notifier_v1")
+        notifier, version = found["notifier"]
+        ms = int(timeout * 1000)
+        # v2: только реальный ввод, без учёта idle-inhibit (видео и т.п.)
+        self.notification = (notifier.get_input_idle_notification(ms, found["seat"]) if version >= 2
+                             else notifier.get_idle_notification(ms, found["seat"]))
+        self.notification.dispatcher["idled"] = lambda *_: on_idle()
+        self.notification.dispatcher["resumed"] = lambda *_: on_resume()
+        self.display.flush()
+        GLib.io_add_watch(self.display.get_fd(), GLib.PRIORITY_DEFAULT, GLib.IOCondition.IN, self.on_readable)
+
+    def on_readable(self, *_):
+        self.display.dispatch(block=True)
+        self.display.flush()
+        return GLib.SOURCE_CONTINUE
+
+
+class Typewriter:
+    """Сменяющиеся фразы, два вида анимации:
+      typewriter — буквы появляются одна за другой в живом ритме (задержки на
+                   знаках препинания), за текстом мигает курсор; дочитанная фраза
+                   стирается «бэкспейсом»;
+      fade       — фраза целиком проявляется, всплывая снизу, и так же растворяется.
+    После паузы появляется следующая."""
+
+    def __init__(self, phrases, font, char_time, anim="typewriter", hold=HOLD_TIME, gap=GAP_TIME):
+        self.phrases = phrases
+        self.hold, self.gap = hold, gap
+        self.fade = anim == "fade"
+        self.font = Pango.FontDescription.from_string(font)
+        self.char_time = char_time
+        self.queue = []
+        self.text = ""
+        self.author_at = None     # где в тексте начинается подпись автора (нет автора — None)
+        self.times = []           # момент появления каждой буквы
+        self.state, self.t = "off", 0.0
+        self.visible = Transition()
+        self.wanted = False
+
+    def next_phrase(self, state):
+        if not self.queue:
+            self.queue = random.sample(self.phrases, len(self.phrases))
+            if len(self.queue) > 1 and self.queue[-1] == self.text:
+                self.queue.insert(0, self.queue.pop())
+        quote, author = split_quote(self.queue.pop())
+        self.text = quote if author is None else f"{quote}\n{author}"
+        self.author_at = None if author is None else len(quote)    # индекс «\n» перед подписью
+        self.state, self.t = state, 0.0
+        if self.fade:
+            self.type_end = self.char_time * FADE_CHARS
+            return
+        ct, t, self.times = self.char_time, 0.0, []
+        for i, ch in enumerate(self.text):
+            if i == self.author_at:      # перед подписью автора — пауза, как будто задумались
+                t += ct * DASH_PAUSE
+            t += ct * random.uniform(0.55, 1.45)
+            self.times.append(t)
+            if ch in ".!?…":
+                t += ct * 6
+            elif ch in ",;:—":
+                t += ct * 3
+            elif ch == " ":
+                t += ct * 0.4
+        self.type_end = t + ct
+
+    def show(self):
+        if self.wanted:
+            return
+        self.wanted = True
+        self.visible.value = 1.0
+        self.visible.go(1.0, 0.01, ease_out_cubic)
+        self.next_phrase("gap")
+
+    def hide(self):
+        if not self.wanted:
+            return
+        self.wanted = False
+        self.visible.go(0.0, HIDE_TIME, ease_out_cubic)
+
+    def erase_count(self):
+        if self.fade:
+            return len(self.text) if self.t < self.type_end else 0
+        return max(0, len(self.text) - int(self.t / (self.char_time * ERASE_SPEED)))
+
+    def fade_value(self):
+        """Плавное появление: 0 — фразы не видно, 1 — проявилась полностью."""
+        if self.state == "typing":
+            return ease_out_cubic(min(self.t / self.type_end, 1.0))
+        if self.state == "erasing":
+            return 1 - ease_in_out_sine(min(self.t / self.type_end, 1.0))
+        return 1.0 if self.state == "hold" else 0.0
+
+    def step(self, dt):
+        self.visible.step(dt)
+        if self.state == "off":
+            return
+        if not self.wanted and self.visible.done:
+            self.state, self.text = "off", ""
+            return
+        self.t += dt
+        if self.state == "gap" and self.t >= self.gap:
+            self.state, self.t = "typing", 0.0
+        elif self.state == "typing" and self.t >= self.type_end:
+            self.state, self.t = "hold", 0.0
+        elif self.state == "hold" and self.t >= self.hold:
+            self.state, self.t = "erasing", 0.0
+        elif self.state == "erasing" and self.erase_count() == 0:
+            self.next_phrase("gap")
+
+    def shown(self):
+        """Сколько букв сейчас на экране."""
+        if self.fade:
+            return len(self.text) if self.state != "gap" else 0
+        if self.state == "typing":
+            return sum(1 for t in self.times if t <= self.t)
+        if self.state == "hold":
+            return len(self.text)
+        if self.state == "erasing":
+            return self.erase_count()
+        return 0
+
+    def caret_alpha(self):
+        if self.fade:
+            return 0.0
+        if self.state in ("typing", "erasing"):
+            return 1.0                      # во время печати курсор не мигает
+        return 0.5 + 0.5 * math.cos(math.tau * self.t / BLINK_PERIOD)
+
+    def draw(self, snapshot, widget, w, h, alpha):
+        alpha *= self.visible.value
+        rise = 0.0
+        if self.fade:
+            k = self.fade_value()
+            alpha *= k
+            rise = FADE_RISE * (1 - k) if self.state == "typing" else 0.0
+        if self.state == "off" or alpha < 0.005:
+            return
+        layout = widget.create_pango_layout(self.text)
+        layout.set_font_description(self.font)
+        box_w = int(w * 0.7)
+        layout.set_width(box_w * Pango.SCALE)
+        layout.set_alignment(Pango.Alignment.CENTER)
+        layout.set_wrap(Pango.WrapMode.WORD)
+        layout.set_spacing(AUTHOR_GAP * Pango.SCALE)
+        # Положение — по всей фразе, чтобы строка не сдвигалась по мере печати
+        _, logical = layout.get_pixel_extents()
+        n = self.shown()
+        cut = len(self.text[:n].encode())        # индексы Pango — в байтах UTF-8
+        end = len(self.text.encode())
+        attrs = Pango.AttrList()
+
+        def add(attr, start, stop):
+            attr.start_index, attr.end_index = start, stop
+            attrs.insert(attr)
+
+        if self.author_at is not None:
+            # Подпись автора — мельче и приглушённее. Pango применяет атрибуты одного типа в порядке
+            # начала диапазона, поэтому приглушаем только уже напечатанную часть подписи, а скрытие
+            # ещё не напечатанного (cut..end) не пересекаем с ней.
+            start = len(self.text[:self.author_at].encode()) + 1     # после «\n»
+            add(Pango.attr_scale_new(AUTHOR_SCALE), start, end)
+            if cut > start:
+                add(Pango.attr_foreground_alpha_new(int(65535 * AUTHOR_ALPHA)), start, cut)
+        if cut < end:
+            add(Pango.attr_foreground_alpha_new(1), cut, end)
+        layout.set_attributes(attrs)
+        color = Gdk.RGBA(red=1, green=0.97, blue=0.92, alpha=0.9)
+
+        snapshot.save()
+        snapshot.translate(Graphene.Point().init((w - box_w) / 2, h / 2 + TEXT_Y - logical.height / 2 + rise))
+        snapshot.push_opacity(alpha)
+        shadow = Gsk.Shadow()
+        shadow.color = Gdk.RGBA(red=0, green=0, blue=0, alpha=0.6)
+        shadow.dx, shadow.dy, shadow.radius = 0, 1, 6
+        snapshot.push_shadow([shadow])
+        snapshot.append_layout(layout, color)
+        # Курсор — тонкая черта сразу за последней напечатанной буквой
+        caret = self.caret_alpha()
+        if caret > 0.01:
+            pos = layout.index_to_pos(cut)
+            x, y, ch = pos.x / Pango.SCALE, pos.y / Pango.SCALE, pos.height / Pango.SCALE
+            snapshot.append_color(Gdk.RGBA(red=color.red, green=color.green, blue=color.blue, alpha=0.85 * caret),
+                                  Graphene.Rect().init(x + 1, y + ch * 0.15, 2, ch * 0.75))
+        snapshot.pop()
+        snapshot.pop()
+        snapshot.restore()
+
+
 def read_screenshot():
     data, _ = SCREENSHOT.communicate()
     if SCREENSHOT.returncode != 0 or not data:
@@ -276,6 +561,18 @@ class FxView(Gtk.Widget):
         self.background = self.shot_blurred = self.effect = None
         self.progress = Transition()      # 0 — рабочий стол, 1 — экран блокировки
         self.fx_alpha = Transition()      # прозрачность частиц
+        conf = read_lock_conf()
+        try:
+            speed = max(10, int(conf.get("lock_text_speed", DEFAULT_SPEED_MS))) / 1000
+        except ValueError:
+            speed = DEFAULT_SPEED_MS / 1000
+        self.text_enabled = conf.get("lock_text", "on") != "off"
+        anim = conf.get("lock_text_anim", TEXT_ANIMS[0])
+        self.idle_show = max(0.5, conf_seconds(conf, "lock_text_idle", IDLE_SHOW))
+        self.typewriter = Typewriter(load_phrases(), conf.get("lock_text_font") or DEFAULT_FONT, speed,
+                                     anim if anim in TEXT_ANIMS else TEXT_ANIMS[0],
+                                     hold=conf_seconds(conf, "lock_text_hold", HOLD_TIME),
+                                     gap=conf_seconds(conf, "lock_text_gap", GAP_TIME))
         self.now = 0.0
 
     def render(self, w, h, draw):
@@ -317,6 +614,7 @@ class FxView(Gtk.Widget):
         self.now += dt
         if self.effect and self.fx_alpha.value > 0:
             self.effect.update(dt, self.now)
+        self.typewriter.step(dt)
         self.queue_draw()
 
     def do_snapshot(self, snapshot):
@@ -352,6 +650,9 @@ class FxView(Gtk.Widget):
                 self.effect.draw(snapshot, self.now)
                 snapshot.pop()
             snapshot.pop()
+
+        # Текст — только на полностью проявившемся экране блокировки
+        self.typewriter.draw(snapshot, self, w, h, stage(p, 0.9, 1.0) if self.shot else 1.0)
 
 
 class FxWindow(Gtk.Window):
@@ -391,10 +692,48 @@ class FxWindow(Gtk.Window):
         self.last = None
         self.ready_sent = False
         self.closing = False
+        self.preview = args.preview
+        self.had_input = False
+        self.show_timer = 0
+        self.idle = None
+        if not args.preview:
+            try:
+                self.idle = IdleWatcher(self.view.idle_show, self.on_idle, self.on_input)
+            except Exception as e:  # без протокола просто не показываем текст
+                print(f"lockfx: idle-notify недоступен: {e}", file=sys.stderr)
         self.add_tick_callback(self.on_tick)
+
+    def on_idle(self):
+        if self.closing:
+            return
+        if self.had_input:
+            # Уже начинали вводить пароль — ждём дольше, чтобы не лечь поверх точек
+            self.cancel_show_timer()
+            wait = max(IDLE_AFTER_INPUT - self.view.idle_show, 0.0)
+            self.show_timer = GLib.timeout_add(int(wait * 1000), self.show_text)
+        else:
+            self.show_text()
+
+    def on_input(self):
+        self.had_input = True
+        self.cancel_show_timer()
+        self.view.typewriter.hide()
+
+    def cancel_show_timer(self):
+        if self.show_timer:
+            GLib.source_remove(self.show_timer)
+            self.show_timer = 0
+
+    def show_text(self):
+        self.show_timer = 0
+        if not self.closing and self.view.text_enabled:
+            self.view.typewriter.show()
+        return GLib.SOURCE_REMOVE
 
     def hide_particles(self):
         view = self.view
+        self.cancel_show_timer()
+        view.typewriter.hide()
         if view.fx_alpha.target != 0.0:
             view.fx_alpha.go(0.0, FX_OUT, ease_out_cubic)
 
@@ -428,6 +767,8 @@ class FxWindow(Gtk.Window):
         if not self.ready_sent and self.frames > 3 and view.progress.done:
             self.ready_sent = True
             print("ready", flush=True)
+            if self.preview:
+                GLib.timeout_add(int(self.view.idle_show * 1000), self.show_text)
         if self.closing and view.progress.done and view.fx_alpha.done:
             # Снимок рабочего стола мог устареть — не обрываем, а растворяем слой
             if self.final_fade.done and self.final_fade.target == 0.0:
